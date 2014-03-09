@@ -1,0 +1,67 @@
+<?php
+//hook_init()
+function hello_init(){
+	//drupal_set_message("Hello again");
+
+}
+//hook_menu()
+function hello_menu(){
+	$items = array();
+	$items['hellopage'] = array(
+		'title' => 'My hello page',
+		'description' => 'Hellos users',
+		'page callback'=>'drupal_get_form',
+		'page arguments' =>array('hello_showHelloForm'),
+		'access callback' =>'user_access',
+		'access arguments'=>array('access content'),
+		'type'=> MENU_NORMAL_ITEM
+		);
+	$items['gethello'] = array(
+		'page callback' => 'hello_ajaxCallHandler',
+		'access callback' =>'user_access',
+		'access arguments'=>array('access content'),
+		'type'=> MENU_NORMAL_ITEM
+		);
+	return $items;
+}
+
+function hello_ajaxCallHandler(){
+
+	global $user;
+	if(empty($_GET['token']) || !drupal_valid_token($_GET['token'], 'my secret value'.$user->uid)){
+		return MENU_ACCESS_DENIED;
+	}
+	echo "Hello ".filter_xss($_GET['name']).'!';
+}
+
+function hello_showHelloForm(){
+	$form=array();
+	$form['name'] = array(
+		'#type'=>'textfield',
+		'#title' => 'Enter your name'
+	);
+
+	$form['submit'] =array(
+			'#type'=>'submit',
+			'#value'=>'Submit'
+	);
+	$form['#submit'][]='hello_showHelloForm_submit';
+	$form['#suffix']='<input type="button" id="submitAjaxButton" value="Submit with Ajax"><br>
+	<div id ="msg-display-area"></div>';
+	drupal_add_js(drupal_get_path('module', 'hello')."/hello.js");
+	drupal_add_css(drupal_get_path('module', 'hello')."/hello.css");
+	global $user;
+	$newtoken = drupal_get_token("my secret value".$user->uid);
+
+	drupal_add_js("var mytoken='$newtoken';","inline");
+	return $form;
+}
+
+function hello_showHelloForm_submit($form, &$form_state){
+	if($form_state['values']['name']  == ""){
+		form_set_error('name', t('Name can\'t be empty'));
+	}
+	else
+		drupal_set_message(t('Hello '.field_filter_xss($form_state['values']['name']).'!'));
+}
+?>
